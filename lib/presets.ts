@@ -1,4 +1,4 @@
-import type { Language, Level, Preset, Question } from "./types";
+import type { Preset, Question } from "./types";
 
 /**
  * Bundled, hand-verified question banks for the three demo presets.
@@ -10,10 +10,15 @@ export const PRESETS: Preset[] = [
     id: "fractions",
     emoji: "🍕",
     title: "Fractions & Decimals",
-    blurb: "Primary maths · English",
-    topic: "Fractions & Decimals",
-    level: "Grade 5",
-    language: "English",
+    blurb: "Class 6 Maths · English",
+    config: {
+      standard: "Class 6",
+      subject: "Maths",
+      language: "English",
+      topic: "Fractions & Decimals",
+      chapter: "Fractions",
+      chapterNumber: 7,
+    },
     diagnostic: [
       {
         id: 1,
@@ -147,10 +152,15 @@ export const PRESETS: Preset[] = [
     id: "photosynthesis",
     emoji: "🌱",
     title: "Photosynthesis",
-    blurb: "Biology · explained in Telugu",
-    topic: "Photosynthesis",
-    level: "High School",
-    language: "Telugu",
+    blurb: "Class 10 Science · Telugu",
+    config: {
+      standard: "Class 10",
+      subject: "Science",
+      language: "Telugu",
+      topic: "Photosynthesis",
+      chapter: "Life Processes",
+      chapterNumber: 5,
+    },
     diagnostic: [
       {
         id: 1,
@@ -325,10 +335,13 @@ export const PRESETS: Preset[] = [
     id: "kinematics",
     emoji: "🚀",
     title: "Kinematics (JEE Main)",
-    blurb: "Competitive physics · English",
-    topic: "Kinematics (JEE Main)",
-    level: "Competitive",
-    language: "English",
+    blurb: "JEE Physics · English",
+    config: {
+      standard: "JEE Aspirant",
+      subject: "Physics",
+      language: "English",
+      topic: "Kinematics (JEE Main)",
+    },
     diagnostic: [
       {
         id: 1,
@@ -500,18 +513,9 @@ export const PRESETS: Preset[] = [
   },
 ];
 
-export function findPreset(
-  topic: string,
-  level: Level,
-  language: Language
-): Preset | undefined {
-  const norm = (s: string) => s.trim().toLowerCase();
-  return PRESETS.find(
-    (p) =>
-      norm(p.topic) === norm(topic) &&
-      p.level === level &&
-      p.language === language
-  );
+export function findPresetById(id: string | null | undefined): Preset | undefined {
+  if (!id) return undefined;
+  return PRESETS.find((p) => p.id === id);
 }
 
 export function cloneQuestions(questions: Question[]): Question[] {

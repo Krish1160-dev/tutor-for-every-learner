@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import type { JudgeResult, TutorConfig, TutorTurn } from "@/lib/types";
+import type { JudgeResult, StudyConfig, TutorTurn } from "@/lib/types";
 import { ErrorBox, LoadingCard, Spinner } from "./ui";
 
 type Props = {
-  config: TutorConfig;
+  config: StudyConfig;
   weakest: string;
   isStretch: boolean;
   tutor: TutorTurn | null;

@@ -1,12 +1,13 @@
 "use client";
 
-import type { Question, TutorConfig } from "@/lib/types";
+import type { Question, StudyConfig } from "@/lib/types";
+import { configSubtitle, configTitle } from "@/lib/types";
 import { ErrorBox, LoadingCard } from "./ui";
 
 const LETTERS = ["A", "B", "C", "D"];
 
 type Props = {
-  config: TutorConfig;
+  config: StudyConfig;
   questions: Question[];
   index: number;
   beforeScore: number | null;
@@ -35,7 +36,7 @@ export function DiagnosticScreen({
   if (loading && questions.length === 0) {
     return (
       <LoadingCard
-        label={`Building 5 diagnostic questions on ${config.topic}…`}
+        label={`Building 5 diagnostic questions on ${configTitle(config)}…`}
       />
     );
   }
@@ -67,8 +68,9 @@ export function DiagnosticScreen({
             />
           </div>
           <p className="mt-3 text-sm text-slate-500">
-            {config.topic} · {config.level}
+            {configTitle(config)}
           </p>
+          <p className="text-xs text-slate-400">{configSubtitle(config)}</p>
         </div>
 
         <div className="card p-5">
@@ -98,7 +100,7 @@ export function DiagnosticScreen({
   return (
     <div className="animate-fade-up space-y-4">
       <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-        <span>Diagnostic · {config.topic}</span>
+        <span>Diagnostic · {configTitle(config)}</span>
         <span>
           {index + 1} of {questions.length}
         </span>

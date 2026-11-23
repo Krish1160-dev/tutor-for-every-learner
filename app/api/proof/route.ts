@@ -2,23 +2,15 @@ import { NextResponse } from "next/server";
 import { generateJSON } from "@/lib/gemini";
 import { proofPrompt } from "@/lib/prompts";
 import { sanitizeQuestions } from "@/lib/validate";
-import type { Language, Level } from "@/lib/types";
+import { errorResponse, parseContext } from "@/lib/context";
 
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const topic = String(body?.topic ?? "").trim();
-    const level = body?.level as Level;
-    const language = body?.language as Language;
-
-    if (!topic || !level || !language) {
-      return NextResponse.json(
-        { error: "Topic, level and language are required." },
-        { status: 400 }
-      );
-    }
+    const body = await request.json().catch(() => null);
+    const ctx = parseContext(body);
+    const pyq = Boolean(body?.pyq);
 
     const diagnostic = Array.isArray(body?.diagnostic)
       ? body.diagnostic
@@ -29,7 +21,7 @@ export async function POST(request: Request) {
           }))
       : [];
 
-    const base = proofPrompt({ topic, level, language, diagnostic });
+    const base = proofPrompt({ ...ctx, diagnostic, pyq });
     const expected = diagnostic.length || 5;
 
     try {
@@ -51,12 +43,10 @@ export async function POST(request: Request) {
     }
   } catch (err) {
     console.error("[api/proof]", err);
-    return NextResponse.json(
-      {
-        error:
-          "The tutor could not build the retest right now. Please tap retry.",
-      },
-      { status: 502 }
+    const { message, status } = errorResponse(
+      err,
+      "The tutor could not build the retest right now. Please tap retry."
     );
+    return NextResponse.json({ error: message }, { status });
   }
 }

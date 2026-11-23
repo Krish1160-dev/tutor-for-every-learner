@@ -2,25 +2,16 @@ import { NextResponse } from "next/server";
 import { generateJSON } from "@/lib/gemini";
 import { diagnosticPrompt } from "@/lib/prompts";
 import { sanitizeQuestions } from "@/lib/validate";
-import type { Language, Level } from "@/lib/types";
+import { errorResponse, parseContext } from "@/lib/context";
 
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
-    const topic = String(body?.topic ?? "").trim();
-    const level = body?.level as Level;
-    const language = body?.language as Language;
+    const body = await request.json().catch(() => null);
+    const ctx = parseContext(body);
 
-    if (!topic || !level || !language) {
-      return NextResponse.json(
-        { error: "Topic, level and language are required." },
-        { status: 400 }
-      );
-    }
-
-    const base = diagnosticPrompt({ topic, level, language, count: 5 });
+    const base = diagnosticPrompt({ ...ctx, count: 5 });
 
     try {
       const raw = await generateJSON<unknown>(base);
@@ -37,12 +28,10 @@ export async function POST(request: Request) {
     }
   } catch (err) {
     console.error("[api/diagnostic]", err);
-    return NextResponse.json(
-      {
-        error:
-          "The tutor could not generate questions right now. Please tap retry.",
-      },
-      { status: 502 }
+    const { message, status } = errorResponse(
+      err,
+      "The tutor could not generate questions right now. Please tap retry."
     );
+    return NextResponse.json({ error: message }, { status });
   }
 }

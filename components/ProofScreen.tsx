@@ -1,12 +1,13 @@
 "use client";
 
-import type { Question, TutorConfig } from "@/lib/types";
+import type { Question, StudyConfig } from "@/lib/types";
+import { configTitle } from "@/lib/types";
 import { ErrorBox, LoadingCard } from "./ui";
 
 const LETTERS = ["A", "B", "C", "D"];
 
 type Props = {
-  config: TutorConfig;
+  config: StudyConfig;
   questions: Question[];
   index: number;
   loading: boolean;
@@ -27,7 +28,7 @@ export function ProofScreen({
   if (loading && questions.length === 0) {
     return (
       <LoadingCard
-        label={`Building 5 new questions on ${config.topic}…`}
+        label={`Building 5 new questions on ${configTitle(config)}…`}
       />
     );
   }
@@ -46,7 +47,7 @@ export function ProofScreen({
   return (
     <div className="animate-fade-up space-y-4">
       <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-        <span>Proof · {config.topic}</span>
+        <span>Proof · {configTitle(config)}</span>
         <span>
           {index + 1} of {questions.length}
         </span>

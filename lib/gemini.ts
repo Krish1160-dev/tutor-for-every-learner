@@ -74,36 +74,55 @@ async function callGroq(opts: GenerateOptions): Promise<string> {
   const key = process.env.GROQ_API_KEY;
   if (!key) throw new Error("MISSING_GROQ_KEY");
 
-  const res = await fetchWithTimeout(
-    "https://api.groq.com/openai/v1/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${key}`,
-      },
-      body: JSON.stringify({
-        model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
-        messages: [
-          { role: "system", content: opts.system },
-          { role: "user", content: opts.user },
-        ],
-        temperature: opts.temperature ?? 0.6,
-        max_tokens: opts.maxTokens ?? 4096,
-        response_format: { type: "json_object" },
-      }),
-    }
-  );
+  const request = () =>
+    fetchWithTimeout(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${key}`,
+        },
+        body: JSON.stringify({
+          model: process.env.GROQ_MODEL || "openai/gpt-oss-120b",
+          messages: [
+            { role: "system", content: opts.system },
+            { role: "user", content: opts.user },
+          ],
+          temperature: opts.temperature ?? 0.6,
+          max_tokens: opts.maxTokens ?? 4096,
+          response_format: { type: "json_object" },
+        }),
+      }
+    );
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Groq ${res.status}: ${body.slice(0, 300)}`);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const res = await request();
+
+    if (res.status === 429) {
+      const body = await res.text();
+      if (attempt === 0) {
+        // Free tier is token-per-minute limited. Wait for the window to clear.
+        const match = body.match(/try again in ([\d.]+)s/i);
+        const waitMs = Math.min((match ? Number(match[1]) : 8) + 1, 18) * 1000;
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
+        continue;
+      }
+      throw new Error(`Groq 429: ${body.slice(0, 300)}`);
+    }
+
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Groq ${res.status}: ${body.slice(0, 300)}`);
+    }
+
+    const data = await res.json();
+    const text = data?.choices?.[0]?.message?.content ?? "";
+    if (!text.trim()) throw new Error("Groq returned empty text");
+    return text;
   }
 
-  const data = await res.json();
-  const text = data?.choices?.[0]?.message?.content ?? "";
-  if (!text.trim()) throw new Error("Groq returned empty text");
-  return text;
+  throw new Error("Groq request failed");
 }
 
 function extractJSON(raw: string): string {

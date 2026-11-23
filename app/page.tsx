@@ -2,35 +2,38 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Shell } from "@/components/Shell";
-import { StartScreen } from "@/components/StartScreen";
+import { StudyHub } from "@/components/StudyHub";
 import { DiagnosticScreen } from "@/components/DiagnosticScreen";
 import { TutorScreen } from "@/components/TutorScreen";
 import { ProofScreen } from "@/components/ProofScreen";
 import { ResultsScreen } from "@/components/ResultsScreen";
-import { cloneQuestions, findPreset } from "@/lib/presets";
+import { cloneQuestions, findPresetById } from "@/lib/presets";
 import { postJSON } from "@/lib/client";
-import type {
-  JudgeResult,
-  Preset,
-  Question,
-  TutorConfig,
-  TutorTurn,
+import {
+  apiConfig,
+  normalizeConfig,
+  type JudgeResult,
+  type Preset,
+  type Question,
+  type StudyConfig,
+  type TutorTurn,
 } from "@/lib/types";
 
 type Stage = "start" | "diagnostic" | "tutor" | "proof" | "results";
 
-const SESSION_KEY = "tutor-session-v2";
+const SESSION_KEY = "tutor-session-v3";
 
-const DEFAULT_CONFIG: TutorConfig = {
-  topic: "",
-  level: "High School",
+const DEFAULT_CONFIG: StudyConfig = {
+  standard: "Class 10",
+  subject: "Science",
   language: "English",
+  topic: "",
 };
 
 export default function Page() {
   const [hydrated, setHydrated] = useState(false);
   const [stage, setStage] = useState<Stage>("start");
-  const [config, setConfig] = useState<TutorConfig>(DEFAULT_CONFIG);
+  const [config, setConfig] = useState<StudyConfig>(DEFAULT_CONFIG);
   const [diagnostic, setDiagnostic] = useState<Question[]>([]);
   const [diagIndex, setDiagIndex] = useState(0);
   const [diagAnswers, setDiagAnswers] = useState<number[]>([]);
@@ -58,7 +61,7 @@ export default function Page() {
       if (raw) {
         const s = JSON.parse(raw);
         if (s && typeof s === "object") {
-          if (s.config) setConfig(s.config);
+          setConfig(normalizeConfig(s.config));
           setDiagnostic(Array.isArray(s.diagnostic) ? s.diagnostic : []);
           setDiagIndex(Number(s.diagIndex) || 0);
           setDiagAnswers(Array.isArray(s.diagAnswers) ? s.diagAnswers : []);
@@ -83,7 +86,9 @@ export default function Page() {
           setAfterScore(
             typeof s.afterScore === "number" ? s.afterScore : null
           );
-          setUsedPresetId(s.usedPresetId ?? null);
+          setUsedPresetId(
+            typeof s.usedPresetId === "string" ? s.usedPresetId : null
+          );
 
           let safeStage: Stage = s.stage ?? "start";
           if (
@@ -196,47 +201,60 @@ export default function Page() {
   }, []);
 
   // ---- start a new diagnostic -----------------------------------------
-  const start = useCallback(async (nextConfig: TutorConfig, preset?: Preset) => {
-    setError(null);
-    setConfig(nextConfig);
-    setDiagnostic([]);
-    setDiagIndex(0);
-    setDiagAnswers([]);
-    setBeforeScore(null);
-    setWrongTags([]);
-    setWeakest("");
-    setIsStretch(false);
-    setTutor(null);
-    setTutorAttempt(1);
-    setTutorExplanations([]);
-    setJudge(null);
-    setReply("");
-    setProof([]);
-    setProofIndex(0);
-    setProofAnswers([]);
-    setAfterScore(null);
-    setUsedPresetId(preset?.id ?? null);
+  const start = useCallback(
+    async (nextConfig: StudyConfig, preset?: Preset) => {
+      setError(null);
+      setConfig(nextConfig);
+      setDiagnostic([]);
+      setDiagIndex(0);
+      setDiagAnswers([]);
+      setBeforeScore(null);
+      setWrongTags([]);
+      setWeakest("");
+      setIsStretch(false);
+      setTutor(null);
+      setTutorAttempt(1);
+      setTutorExplanations([]);
+      setJudge(null);
+      setReply("");
+      setProof([]);
+      setProofIndex(0);
+      setProofAnswers([]);
+      setAfterScore(null);
+      setUsedPresetId(preset?.id ?? null);
 
-    if (preset) {
-      setDiagnostic(cloneQuestions(preset.diagnostic));
-      setStage("diagnostic");
-      return;
-    }
+      if (preset) {
+        setDiagnostic(cloneQuestions(preset.diagnostic));
+        setStage("diagnostic");
+        return;
+      }
 
-    setLoading(true);
-    try {
-      const data = await postJSON<{ questions: Question[] }>(
-        "/api/diagnostic",
-        nextConfig
-      );
-      setDiagnostic(data.questions);
-      setStage("diagnostic");
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      setLoading(true);
+      try {
+        if (nextConfig.pyq) {
+          const data = await postJSON<{ questions: Question[] }>("/api/pyq", {
+            year: nextConfig.pyq.year,
+            session: nextConfig.pyq.session,
+            shift: nextConfig.pyq.shift,
+            subject: nextConfig.pyq.subject,
+          });
+          setDiagnostic(data.questions);
+        } else {
+          const data = await postJSON<{ questions: Question[] }>(
+            "/api/diagnostic",
+            apiConfig(nextConfig)
+          );
+          setDiagnostic(data.questions);
+        }
+        setStage("diagnostic");
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Something went wrong.");
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
 
   // ---- diagnostic answers ---------------------------------------------
   const answerDiagnostic = useCallback(
@@ -281,7 +299,7 @@ export default function Page() {
     setTutorExplanations([]);
     try {
       const turn = await postJSON<TutorTurn>("/api/tutor", {
-        ...config,
+        ...apiConfig(config),
         mistake: weakest,
         attempt: 1,
         previous: [],
@@ -337,7 +355,7 @@ export default function Page() {
     setTutorExplanations(previous);
     try {
       const turn = await postJSON<TutorTurn>("/api/tutor", {
-        ...config,
+        ...apiConfig(config),
         mistake: weakest,
         attempt,
         previous,
@@ -361,10 +379,7 @@ export default function Page() {
     setProofAnswers([]);
     setAfterScore(null);
 
-    const preset = usedPresetId
-      ? findPreset(config.topic, config.level, config.language)
-      : undefined;
-
+    const preset = findPresetById(usedPresetId);
     if (preset) {
       setProof(cloneQuestions(preset.proof));
       return;
@@ -373,7 +388,7 @@ export default function Page() {
     setLoading(true);
     try {
       const data = await postJSON<{ questions: Question[] }>("/api/proof", {
-        ...config,
+        ...apiConfig(config),
         diagnostic: diagnostic.map((q) => ({
           question: q.question,
           explanation: q.explanation,
@@ -428,9 +443,7 @@ export default function Page() {
     stage === "start" ? 1 : stage === "diagnostic" ? 2 : stage === "tutor" ? 3 : 4;
 
   const replay = useCallback(() => {
-    const preset = usedPresetId
-      ? findPreset(config.topic, config.level, config.language)
-      : undefined;
+    const preset = findPresetById(usedPresetId);
     start(config, preset);
   }, [usedPresetId, config, start]);
 
@@ -445,7 +458,7 @@ export default function Page() {
   return (
     <Shell step={step} onReset={stage !== "start" ? reset : undefined}>
       {stage === "start" && (
-        <StartScreen
+        <StudyHub
           defaultConfig={config}
           loading={loading}
           error={error}
@@ -507,6 +520,10 @@ export default function Page() {
           total={diagnostic.length}
           fixed={fixed}
           stillWorking={stillWorking}
+          diagnostic={diagnostic}
+          diagAnswers={diagAnswers}
+          proof={proof}
+          proofAnswers={proofAnswers}
           onRestart={reset}
           onReplay={replay}
         />
