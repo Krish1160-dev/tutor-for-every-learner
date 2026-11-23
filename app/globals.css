@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #f6f7fb;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  min-height: 100dvh;
+  color: #12132b;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #e0e7ff 0%, transparent 55%),
+    radial-gradient(1000px 500px at 100% 0%, #d1fae5 0%, transparent 45%),
+    linear-gradient(180deg, #f8fafc 0%, #f4f5fb 100%);
+  background-attachment: fixed;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", "Noto Sans Telugu", "Noto Sans Tamil",
+    "Noto Sans Devanagari", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: #c7d2fe;
+}
+
+@layer components {
+  .card {
+    @apply rounded-3xl bg-white/90 shadow-card ring-1 ring-black/5 backdrop-blur;
+  }
+
+  .chip {
+    @apply inline-flex cursor-pointer select-none items-center justify-center rounded-full px-4 py-2 text-sm font-medium ring-1 ring-black/5 transition;
+  }
+
+  .chip-idle {
+    @apply bg-white text-slate-700 hover:bg-brand-50 hover:ring-brand-200;
+  }
+
+  .chip-active {
+    @apply bg-brand-600 text-white ring-brand-600 shadow-soft;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-base font-semibold transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-base font-semibold transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 bg-brand-600 text-white shadow-soft hover:bg-brand-700;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-base font-semibold transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 bg-white text-slate-700 ring-1 ring-black/10 hover:bg-slate-50;
+  }
+
+  .btn-mint {
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 text-base font-semibold transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 bg-mint-500 text-white shadow-soft hover:bg-mint-600;
+  }
+
+  .option {
+    @apply flex w-full items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-left text-base transition hover:border-brand-300 hover:bg-brand-50/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400;
+  }
+
+  .option-selected {
+    @apply border-brand-500 bg-brand-50 ring-1 ring-brand-400;
+  }
+
+  .option-correct {
+    @apply border-mint-500 bg-mint-500/10 ring-1 ring-mint-500;
+  }
+
+  .option-wrong {
+    @apply border-rose-400 bg-rose-50 ring-1 ring-rose-300;
+  }
+
+  .option-letter {
+    @apply grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-100 text-sm font-bold text-slate-600;
+  }
+
+  .prose-tutor p {
+    @apply mb-3 leading-relaxed;
+  }
+}
+
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 999px;
+}
