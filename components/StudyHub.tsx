@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PRESETS } from "@/lib/presets";
 import {
   LANGUAGES,
@@ -35,6 +35,20 @@ export function StudyHub({ defaultConfig, loading, error, onStart }: Props) {
   const activeSubject = subjects.includes(subject) ? subject : subjects[0];
   const jee = isJee(standard);
   const topicReady = topic.trim().length > 1 && !loading;
+
+  // The class row scrolls sideways on phones. Keep the selected chip in view so
+  // tapping "Class 6" after "JEE" never leaves the choice off-screen.
+  const chipRowRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const row = chipRowRef.current;
+    if (!row) return;
+    const active = row.querySelector<HTMLElement>('[aria-pressed="true"]');
+    active?.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    });
+  }, [standard]);
 
   const chooseStandard = (next: Standard) => {
     setStandard(next);
@@ -99,13 +113,16 @@ export function StudyHub({ defaultConfig, loading, error, onStart }: Props) {
           <p className="mb-1.5 text-sm font-semibold text-ink">
             Class / standard
           </p>
-          <div className="scroll-thin -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+          <div
+            ref={chipRowRef}
+            className="scroll-thin -mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1"
+          >
             {STANDARDS.map((s) => (
               <button
                 key={s}
                 onClick={() => chooseStandard(s)}
                 aria-pressed={standard === s}
-                className={`chip shrink-0 ${
+                className={`chip shrink-0 snap-start ${
                   standard === s ? "chip-active" : "chip-idle"
                 }`}
               >

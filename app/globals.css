@@ -92,12 +92,27 @@ body {
   }
 }
 
+.scroll-thin {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
 .scroll-thin::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 .scroll-thin::-webkit-scrollbar-thumb {
   background: #cbd5e1;
   border-radius: 999px;
+}
+
+/* Phones: a visible scrollbar under a chip row looks like a broken control. */
+@media (max-width: 640px) {
+  .scroll-thin {
+    scrollbar-width: none;
+  }
+  .scroll-thin::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 /* KaTeX: the formula cards control their own spacing. */
