@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { AuthButton } from "./AuthButton";
 
 const STEPS = ["Start", "Diagnostic", "Tutor", "Proof"];
 
@@ -27,14 +28,17 @@ export function Shell({
             <p className="text-xs text-slate-500">Find the gap · Teach it · Prove it</p>
           </div>
         </div>
-        {onReset && (
-          <button
-            onClick={onReset}
-            className="rounded-full px-3 py-1.5 text-xs font-medium text-slate-500 ring-1 ring-black/5 transition hover:bg-white"
-          >
-            Start over
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <AuthButton />
+          {onReset && (
+            <button
+              onClick={onReset}
+              className="rounded-full px-3 py-1.5 text-xs font-medium text-slate-500 ring-1 ring-black/5 transition hover:bg-white"
+            >
+              Start over
+            </button>
+          )}
+        </div>
       </header>
 
       <nav className="mt-5 flex items-center gap-1.5" aria-label="Progress">

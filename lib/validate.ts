@@ -2,8 +2,14 @@ import type {
   Chapter,
   ChapterRevision,
   ChapterSummary,
+  DoubtSolution,
+  ExamNotes,
+  FormulaCard,
+  FormulaKind,
+  FormulaSheet,
   JudgeResult,
   Question,
+  SolvedExample,
   TutorTurn,
 } from "./types";
 
@@ -251,4 +257,259 @@ export function sanitizeRevision(input: unknown): ChapterRevision {
   if (notes.length === 0) throw new Error("Empty revision notes");
 
   return { notes, examples };
+}
+
+// ---------------------------------------------------------------------------
+// Full-page chapter reader
+// ---------------------------------------------------------------------------
+
+function str(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+const LATEX_SYMBOLS: Record<string, string> = {
+  times: "×",
+  cdot: "·",
+  div: "÷",
+  pm: "±",
+  approx: "≈",
+  neq: "≠",
+  leq: "≤",
+  le: "≤",
+  geq: "≥",
+  ge: "≥",
+  to: "→",
+  rightarrow: "→",
+  leftarrow: "←",
+  Rightarrow: "⇒",
+  Delta: "Δ",
+  delta: "δ",
+  theta: "θ",
+  mu: "μ",
+  rho: "ρ",
+  Omega: "Ω",
+  omega: "ω",
+  alpha: "α",
+  beta: "β",
+  gamma: "γ",
+  lambda: "λ",
+  pi: "π",
+  sigma: "σ",
+  Sigma: "Σ",
+  degree: "°",
+  circ: "°",
+  infty: "∞",
+  perp: "⊥",
+  parallel: "∥",
+};
+
+/**
+ * Prose fields (steps, answers, definitions) must read cleanly on a phone.
+ * Models occasionally leak KaTeX commands into them, so convert the common
+ * ones to plain symbols instead of showing raw "\times" to a student.
+ */
+function plainMath(input: string): string {
+  if (!input || !/[\\$^_]/.test(input)) return input;
+
+  let out = input;
+  out = out.replace(/\\frac\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, "($1)/($2)");
+  out = out.replace(/\\sqrt\s*\{([^{}]*)\}/g, "√($1)");
+  out = out.replace(/\\(?:text|mathrm|mathbf)\s*\{([^{}]*)\}/g, "$1");
+  out = out.replace(/\\([a-zA-Z]+)/g, (whole, name: string) => {
+    return LATEX_SYMBOLS[name] ?? whole;
+  });
+  out = out.replace(/\^\{?2\}?/g, "²");
+  out = out.replace(/\^\{?3\}?/g, "³");
+  out = out.replace(/\^\{?([^{}]*)\}?/g, "^$1");
+  out = out.replace(/_\{?([^{}]*)\}?/g, "_$1");
+  out = out.replace(/\$/g, "").replace(/\\/g, "");
+
+  return out.replace(/[ \t]{2,}/g, " ").trim();
+}
+
+/** Trimmed prose with stray LaTeX normalized. */
+function text(value: unknown): string {
+  return plainMath(str(value));
+}
+
+function strList(value: unknown, max: number): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map(text).filter(Boolean).slice(0, max);
+}
+
+function sanitizeExample(value: unknown): SolvedExample | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as Record<string, unknown>;
+  const problem = text(row.problem);
+  const answer = text(row.answer);
+  const steps = strList(row.steps, 6);
+  if (!problem || !answer) return null;
+  return { problem, steps, answer };
+}
+
+export function sanitizeExamNotes(input: unknown): ExamNotes {
+  const o =
+    input && typeof input === "object"
+      ? (input as Record<string, unknown>)
+      : {};
+
+  const coreConcepts = asArray(o.coreConcepts, "coreConcepts")
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const row = item as Record<string, unknown>;
+      const term = text(row.term);
+      const definition = text(row.definition);
+      return term && definition ? { term, definition } : null;
+    })
+    .filter((x): x is { term: string; definition: string } => Boolean(x))
+    .slice(0, 10);
+
+  const mechanisms = asArray(o.mechanisms, "mechanisms")
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const row = item as Record<string, unknown>;
+      const heading = text(row.heading);
+      const explanation = text(row.explanation);
+      return heading && explanation ? { heading, explanation } : null;
+    })
+    .filter((x): x is { heading: string; explanation: string } => Boolean(x))
+    .slice(0, 6);
+
+  const boardPoints = strList(o.boardPoints, 12);
+
+  const commonMistakes = asArray(o.commonMistakes, "commonMistakes")
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const row = item as Record<string, unknown>;
+      const mistake = text(row.mistake);
+      const fix = text(row.fix);
+      return mistake && fix ? { mistake, fix } : null;
+    })
+    .filter((x): x is { mistake: string; fix: string } => Boolean(x))
+    .slice(0, 8);
+
+  const examples = asArray(o.examples, "examples")
+    .map(sanitizeExample)
+    .filter((x): x is SolvedExample => Boolean(x))
+    .slice(0, 4);
+
+  if (
+    coreConcepts.length === 0 &&
+    mechanisms.length === 0 &&
+    boardPoints.length === 0
+  ) {
+    throw new Error("Empty exam notes");
+  }
+
+  return { coreConcepts, mechanisms, boardPoints, commonMistakes, examples };
+}
+
+const FORMULA_KINDS: FormulaKind[] = [
+  "formula",
+  "law",
+  "reaction",
+  "constant",
+];
+
+/** Strip $ / $$ / \( \) wrappers that models add around KaTeX. */
+function cleanLatex(value: unknown): string | undefined {
+  let latex = str(value);
+  if (!latex) return undefined;
+  latex = latex.replace(/^\$\$?/, "").replace(/\$\$?$/, "");
+  latex = latex.replace(/^\\\[/, "").replace(/\\\]$/, "");
+  latex = latex.replace(/^\\\(/, "").replace(/\\\)$/, "");
+  return latex.trim() || undefined;
+}
+
+function sanitizeFormulaCard(value: unknown): FormulaCard | null {
+  if (!value || typeof value !== "object") return null;
+  const row = value as Record<string, unknown>;
+
+  const name = text(row.name);
+  if (!name) return null;
+
+  const latex = cleanLatex(row.latex);
+  const expression = text(row.expression) || undefined;
+  if (!latex && !expression) return null;
+
+  const rawKind = str(row.kind).toLowerCase();
+  const kind = (FORMULA_KINDS as string[]).includes(rawKind)
+    ? (rawKind as FormulaKind)
+    : "formula";
+
+  const symbols = asArray(row.symbols, "symbols")
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const s = item as Record<string, unknown>;
+      const symbol = text(s.symbol);
+      const meaning = text(s.meaning);
+      const unit = text(s.unit);
+      return symbol && meaning
+        ? { symbol, meaning, unit: unit || "—" }
+        : null;
+    })
+    .filter(
+      (x): x is { symbol: string; meaning: string; unit: string } => Boolean(x)
+    )
+    .slice(0, 10);
+
+  const whenToUse = text(row.whenToUse);
+
+  const quickExample =
+    sanitizeExample(row.quickExample) ?? {
+      problem: "",
+      steps: [],
+      answer: "",
+    };
+
+  return {
+    name,
+    kind,
+    ...(latex ? { latex } : {}),
+    ...(expression ? { expression } : {}),
+    symbols,
+    whenToUse,
+    quickExample,
+  };
+}
+
+export function sanitizeFormulaSheet(input: unknown): FormulaSheet {
+  const o =
+    input && typeof input === "object"
+      ? (input as Record<string, unknown>)
+      : {};
+
+  const cards = asArray(o.cards, "cards")
+    .map(sanitizeFormulaCard)
+    .filter((x): x is FormulaCard => Boolean(x))
+    .slice(0, 14);
+
+  if (cards.length < 3) {
+    throw new Error(`Only ${cards.length} usable formula card(s) returned`);
+  }
+
+  return { cards };
+}
+
+export function sanitizeDoubtSolution(input: unknown): DoubtSolution {
+  const o =
+    input && typeof input === "object"
+      ? (input as Record<string, unknown>)
+      : {};
+
+  const given = text(o.given);
+  const concept = text(o.concept);
+  const finalAnswer = text(o.finalAnswer);
+  const steps = strList(o.steps, 10);
+
+  if (!finalAnswer) {
+    throw new Error("Doubt solver returned no final answer");
+  }
+
+  return {
+    given: given || "Not clearly readable from the image.",
+    concept: concept || "—",
+    steps,
+    finalAnswer,
+  };
 }

@@ -1,6 +1,6 @@
 type Entry<T> = { value: T; expires: number };
 
-const PREFIX = "tutor-cache-v2:";
+const PREFIX = "tutor-cache-v3:";
 const WEEK = 7 * 24 * 60 * 60 * 1000;
 
 export function cacheKey(...parts: (string | number | undefined)[]): string {

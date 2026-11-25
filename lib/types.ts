@@ -65,6 +65,59 @@ export type NotesResponse = {
   errors?: string[];
 };
 
+// ---------------------------------------------------------------------------
+// Full-page chapter reader
+// ---------------------------------------------------------------------------
+
+export type SolvedExample = {
+  problem: string;
+  steps: string[];
+  answer: string;
+};
+
+/** Board-exam-oriented notes shown on the chapter page. */
+export type ExamNotes = {
+  coreConcepts: { term: string; definition: string }[];
+  mechanisms: { heading: string; explanation: string }[];
+  boardPoints: string[];
+  commonMistakes: { mistake: string; fix: string }[];
+  examples: SolvedExample[];
+};
+
+export type FormulaKind = "formula" | "law" | "reaction" | "constant";
+
+export type FormulaCard = {
+  name: string;
+  kind: FormulaKind;
+  /** KaTeX source, without $ delimiters. Preferred when present. */
+  latex?: string;
+  /** Plain-text fallback, used for word equations or reactions. */
+  expression?: string;
+  symbols: { symbol: string; meaning: string; unit: string }[];
+  whenToUse: string;
+  quickExample: SolvedExample;
+};
+
+export type FormulaSheet = {
+  cards: FormulaCard[];
+};
+
+/** Structured answer returned by the camera doubt solver. */
+export type DoubtSolution = {
+  given: string;
+  concept: string;
+  steps: string[];
+  finalAnswer: string;
+};
+
+export type ChapterRef = {
+  standard: Standard;
+  subject: Subject;
+  chapter: string;
+  chapterNumber?: number;
+  language: Language;
+};
+
 export type PyqSelection = {
   year: number;
   session: string;

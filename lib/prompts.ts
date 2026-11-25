@@ -237,8 +237,103 @@ Return JSON only, exactly in this shape:
 }
 
 // ---------------------------------------------------------------------------
-// JEE PYQ hub
+// Full-page chapter reader: exam notes, formula sheet, camera doubts
 // ---------------------------------------------------------------------------
+
+export function examNotesPrompt(args: {
+  standard: string;
+  subject: Subject;
+  chapter: string;
+  chapterNumber?: number;
+  language: Language;
+}): PromptPair {
+  return {
+    system:
+      "You are a senior Indian board-exam examiner and NCERT teacher. You write notes that a student can revise the night before a school or board exam. You are precise, never padded, and you always reply with valid JSON only.",
+    user: `Write exam-focused notes for this NCERT chapter:
+- Standard: ${args.standard}
+- Subject: ${args.subject}
+- Chapter: ${args.chapter}${
+      args.chapterNumber ? ` (Chapter ${args.chapterNumber})` : ""
+    }
+
+Structure the notes exactly for exam revision:
+1. "coreConcepts": 5 to 8 entries. Each "term" is the exact exam-ready term from the textbook; each "definition" is the precise NCERT definition in one or two sentences. Do not paraphrase loosely.
+2. "mechanisms": 3 to 5 entries explaining how the key process, law, mechanism or reaction works, in simple cause-and-effect language. Each has a short "heading" and a 2 to 4 sentence "explanation".
+3. "boardPoints": 6 to 10 high-yield points that board examiners actually ask — named laws, derivations, labelled-diagram points, exceptions, values of constants, or standard results.
+4. "commonMistakes": 4 to 6 entries. Each "mistake" is what students actually write to lose marks, and each "fix" is the correction an examiner expects.
+5. "examples": 2 to 3 solved NCERT-style examples. Each has a "problem", a "steps" array of 2 to 5 numbered reasoning steps, and a short "answer".
+
+Rules:
+- Write ALL prose in ${args.language}. Keep technical terms, symbols, formulas and chemical names in English where that is how Indian students learn them.
+- Write maths in prose as plain readable text with real symbols (V = I × R, 2 × 5 = 10, √3, 10² m/s), never as LaTeX commands.
+- Be accurate to the NCERT scope. Do not invent facts, values or chapters.
+- Keep it dense and scannable. No filler sentences, no motivational text.
+
+Return JSON only, exactly in this shape:
+{"coreConcepts":[{"term":"...","definition":"..."}],"mechanisms":[{"heading":"...","explanation":"..."}],"boardPoints":["..."],"commonMistakes":[{"mistake":"...","fix":"..."}],"examples":[{"problem":"...","steps":["...","..."],"answer":"..."}]}`,
+  };
+}
+
+export function formulaSheetPrompt(args: {
+  standard: string;
+  subject: Subject;
+  chapter: string;
+  chapterNumber?: number;
+  language: Language;
+}): PromptPair {
+  return {
+    system:
+      "You are an Indian curriculum physics, chemistry and maths teacher who builds formula sheets for board and JEE exams. You know exactly which relations are examinable. You always reply with valid JSON only.",
+    user: `Build a complete formula sheet for this NCERT chapter:
+- Standard: ${args.standard}
+- Subject: ${args.subject}
+- Chapter: ${args.chapter}${
+      args.chapterNumber ? ` (Chapter ${args.chapterNumber})` : ""
+    }
+
+List every important formula, constant, law or reaction relation that is examinable in this chapter. 6 to 12 cards.
+
+For each card:
+- "name": short title, e.g. "Ohm's Law" or "Quadratic Formula".
+- "kind": one of "formula", "law", "reaction", "constant".
+- "latex": the relation as raw KaTeX source with NO dollar signs and NO surrounding text. Use \\frac{}{}, \\times, \\cdot, \\Delta, \\sqrt{}, subscripts and superscripts. Example: "V = I R" or "v = u + a t" or "x = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a}".
+- "expression": ONLY when the relation cannot be written as maths (word equations, reaction templates, IUPAC names). Then leave "latex" out and put plain text here, e.g. "Acid + Base -> Salt + Water".
+- "symbols": every symbol in the relation, each with "symbol", "meaning", and "unit" (SI unit, or "dimensionless" / "no unit"). Write "symbol" as the plain character itself (ρ, Δ, θ, √, ²), never as a LaTeX command.
+- "whenToUse": the exact problem types or scenarios where a student should reach for this relation. One or two sentences.
+- "quickExample": one short solved application with "problem", "steps" (2 to 4 short steps), and "answer".
+
+Rules:
+- If the chapter is theoretical and has no mathematical formulas, return laws, rules, reaction templates and key constants instead, with kind "law" or "reaction".
+- Write explanations in ${args.language}. Keep the maths itself unchanged.
+- Inside "whenToUse", "quickExample.problem", "quickExample.steps" and "quickExample.answer" write maths as plain readable text with real symbols (V = I × R, 2 × 5 = 10, √3), never as LaTeX commands. LaTeX belongs only in the "latex" field.
+- Accuracy over quantity. Do not invent relations that are not in the NCERT chapter.
+
+Return JSON only, exactly in this shape:
+{"cards":[{"name":"...","kind":"formula","latex":"...","symbols":[{"symbol":"V","meaning":"potential difference","unit":"volt (V)"}],"whenToUse":"...","quickExample":{"problem":"...","steps":["...","..."],"answer":"..."}}]}`,
+  };
+}
+
+export function doubtSystemPrompt(args: {
+  standard?: string;
+  subject?: string;
+  language: Language;
+}): string {
+  return `You are a careful Indian school and JEE tutor reading a photo of a textbook or exam question.
+
+Non-negotiable accuracy rules:
+- Read the question from the image first. If any number, symbol, unit or subscript is unclear, say what you assumed in "given" instead of silently guessing.
+- Identify the concept and the formula before calculating.
+- Re-check every arithmetic and algebra step a second time before writing the final answer. Substitute the answer back where possible.
+- Keep units consistent, and carry units through the working.
+- If the image does not contain a solvable question, or is unreadable, set "finalAnswer" to a short explanation of what is unclear. Never invent a question.
+- Stay inside the ${args.standard ?? "school"} ${args.subject ?? ""} syllabus when the question is at that level.
+- Write "given", "concept", "steps" and "finalAnswer" in ${args.language}. Keep symbols, formulas and chemical names in English.
+- Write maths in prose as plain readable text with real symbols (V = I × R, 2 × 5 = 10, √3, 10² m/s), never as LaTeX commands.
+
+Return JSON only, exactly in this shape:
+{"given":"the data extracted from the question, with units","concept":"the concept and the formula or law used","steps":["Step 1: ...","Step 2: ...","Step 3: ..."],"finalAnswer":"the final answer with units"}`;
+}
 
 export function pyqPrompt(args: {
   year: number;

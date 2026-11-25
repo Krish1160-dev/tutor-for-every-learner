@@ -99,3 +99,14 @@ body {
   background: #cbd5e1;
   border-radius: 999px;
 }
+
+/* KaTeX: the formula cards control their own spacing. */
+.katex-scope .katex-display {
+  margin: 0;
+}
+.katex-scope .katex {
+  font-size: 1.05em;
+}
+.katex-scope {
+  scrollbar-width: thin;
+}

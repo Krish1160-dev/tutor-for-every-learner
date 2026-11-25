@@ -165,8 +165,6 @@ export function StudyHub({ defaultConfig, loading, error, onStart }: Props) {
             standard={standard}
             subject={activeSubject}
             language={language}
-            busy={loading}
-            onPractice={onStart}
           />
         )}
       </section>

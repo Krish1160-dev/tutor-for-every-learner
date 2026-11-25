@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Shell } from "@/components/Shell";
 import { StudyHub } from "@/components/StudyHub";
 import { DiagnosticScreen } from "@/components/DiagnosticScreen";
@@ -9,8 +9,12 @@ import { ProofScreen } from "@/components/ProofScreen";
 import { ResultsScreen } from "@/components/ResultsScreen";
 import { cloneQuestions, findPresetById } from "@/lib/presets";
 import { postJSON } from "@/lib/client";
+import { saveDiagnosticScore } from "@/lib/supabase/scores";
 import {
   apiConfig,
+  isLanguage,
+  isStandard,
+  isSubject,
   normalizeConfig,
   type JudgeResult,
   type Preset,
@@ -53,6 +57,7 @@ export default function Page() {
   const [usedPresetId, setUsedPresetId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const savedRef = useRef<string | null>(null);
 
   // ---- restore a previous session -------------------------------------
   useEffect(() => {
@@ -255,6 +260,62 @@ export default function Page() {
     },
     []
   );
+
+  // ---- deep link from a chapter page: /?practice=1&... -----------------
+  useEffect(() => {
+    if (!hydrated) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("practice") !== "1") return;
+
+    const standard = params.get("standard");
+    const subject = params.get("subject");
+    const chapter = params.get("chapter") ?? "";
+    const lang = params.get("lang");
+    const num = Number(params.get("num"));
+
+    if (!isStandard(standard) || !isSubject(subject) || !chapter) return;
+
+    // Clear the query so a refresh does not silently restart the loop.
+    window.history.replaceState({}, "", "/");
+
+    void start({
+      standard,
+      subject,
+      language: isLanguage(lang) ? lang : "English",
+      topic: chapter,
+      chapter,
+      chapterNumber: Number.isFinite(num) && num > 0 ? num : undefined,
+    });
+  }, [hydrated, start]);
+
+  // ---- persist a finished result for signed-in students ----------------
+  useEffect(() => {
+    if (stage !== "results") return;
+    if (beforeScore === null || afterScore === null) return;
+
+    const signature = [
+      config.standard,
+      config.subject,
+      config.chapter ?? config.topic,
+      beforeScore,
+      afterScore,
+      diagnostic.length,
+    ].join("|");
+
+    if (savedRef.current === signature) return;
+    savedRef.current = signature;
+
+    void saveDiagnosticScore({
+      standard: config.standard,
+      subject: config.subject,
+      language: config.language,
+      chapter: config.chapter,
+      topic: config.topic,
+      beforeScore,
+      afterScore,
+      total: diagnostic.length,
+    });
+  }, [stage, beforeScore, afterScore, config, diagnostic.length]);
 
   // ---- diagnostic answers ---------------------------------------------
   const answerDiagnostic = useCallback(

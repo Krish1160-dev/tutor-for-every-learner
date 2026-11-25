@@ -8,7 +8,6 @@ import type {
   Chapter,
   Language,
   Standard,
-  StudyConfig,
   Subject,
 } from "@/lib/types";
 import { ChapterCard } from "./ChapterCard";
@@ -18,19 +17,11 @@ type Props = {
   standard: Standard;
   subject: Subject;
   language: Language;
-  busy?: boolean;
-  onPractice: (config: StudyConfig) => void;
 };
 
 type ChaptersResponse = { chapters: Chapter[]; source?: string };
 
-export function ChapterBrowser({
-  standard,
-  subject,
-  language,
-  busy,
-  onPractice,
-}: Props) {
+export function ChapterBrowser({ standard, subject, language }: Props) {
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -97,8 +88,7 @@ export function ChapterBrowser({
             NCERT chapters · {standard} {subject}
           </p>
           <p className="text-xs text-slate-500">
-            Book summary, revision notes and a practice diagnostic for every
-            chapter.
+            Tap a chapter for exam notes, its formula sheet and a diagnostic.
           </p>
         </div>
         {chapters.length > 0 && (
@@ -138,13 +128,11 @@ export function ChapterBrowser({
         <div className="space-y-2">
           {filtered.map((chapter) => (
             <ChapterCard
-              key={`${chapter.number}-${chapter.title}-${language}`}
+              key={`${chapter.number}-${chapter.title}`}
               standard={standard}
               subject={subject}
               language={language}
               chapter={chapter}
-              busy={busy}
-              onPractice={onPractice}
             />
           ))}
 
