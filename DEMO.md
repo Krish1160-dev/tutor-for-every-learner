@@ -61,7 +61,7 @@ Scores, misconception detection, proof and results all work offline; only the tu
 
 **How it proves learning.** The Before score comes from the diagnostic. The After score comes from **different questions on the same concepts**. A higher score can't come from memorising the first set. We show the gaps fixed and the ones still open — honest data, no streaks or badges. Correct options are shuffled so position never gives the answer away.
 
-**How it was built.** Next.js + React + TypeScript + Tailwind, with KaTeX for formulas; Google Gemini 2.5 Flash for generation, tutoring, grading and vision; Groq as an automatic text fallback; Supabase for optional Google/email sign-in, saved scores and a shared chapter cache guarded by Row Level Security; deployed on Vercel with server-side keys. NCERT chapter seeds keep the common paths instant, and each chapter's notes and formulas are generated once and then served from the cache. Built with AI assistance for the C3 hackathon.
+**How it was built.** Next.js + React + TypeScript + Tailwind, with KaTeX for formulas; Google Gemini 3.1 Flash-Lite for generation, tutoring, grading and vision (thinking disabled so answers stay fast); Groq as an automatic text fallback; Supabase for optional Google/email sign-in, saved scores and a shared chapter cache guarded by Row Level Security; deployed on Vercel with server-side keys. NCERT chapter seeds keep the common paths instant, and each chapter's notes and formulas are generated once and then served from the cache. Built with AI assistance for the C3 hackathon.
 
 **What's next.** More exam boards and state syllabi, a teacher dashboard with class-level gap maps, spaced review of fixed vs still-open misconceptions, and offline packs for low-connectivity classrooms.
 

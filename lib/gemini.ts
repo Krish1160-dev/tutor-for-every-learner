@@ -1,6 +1,9 @@
 import type { PromptPair } from "./prompts";
 
-const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"];
+// Free-tier reality (Nov 2026): the 3.5–3.8 Flash models answer 503 "high demand"
+// and Pro answers 429 quota. Flash-Lite is the only model this key can call, and
+// it is fast once thinking is disabled. Groq remains the text backup.
+const GEMINI_MODELS = ["gemini-3.1-flash-lite"];
 
 type GenerateOptions = PromptPair & {
   temperature?: number;
@@ -10,7 +13,7 @@ type GenerateOptions = PromptPair & {
 async function fetchWithTimeout(
   url: string,
   init: RequestInit,
-  ms = 45000
+  ms = 20000
 ): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
@@ -28,6 +31,7 @@ async function callGemini(opts: GenerateOptions): Promise<string> {
   let lastError: unknown = null;
 
   for (const model of GEMINI_MODELS) {
+    const started = Date.now();
     try {
       const res = await fetchWithTimeout(
         `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(
@@ -43,6 +47,9 @@ async function callGemini(opts: GenerateOptions): Promise<string> {
               responseMimeType: "application/json",
               temperature: opts.temperature ?? 0.6,
               maxOutputTokens: opts.maxTokens ?? 4096,
+              // Thinking tokens count against maxOutputTokens and can turn a
+              // 2-second answer into a 4-minute one. Off for a snappy tutor.
+              thinkingConfig: { thinkingBudget: 0 },
             },
           }),
         }
@@ -50,6 +57,9 @@ async function callGemini(opts: GenerateOptions): Promise<string> {
 
       if (!res.ok) {
         const body = await res.text();
+        console.error(
+          `[gemini] ${model} HTTP ${res.status} after ${Date.now() - started}ms`
+        );
         throw new Error(
           `Gemini ${model} ${res.status}: ${body.slice(0, 300)}`
         );
@@ -61,9 +71,15 @@ async function callGemini(opts: GenerateOptions): Promise<string> {
         ? parts.map((p: { text?: string }) => p.text ?? "").join("")
         : "";
       if (!text.trim()) throw new Error(`Gemini ${model} returned empty text`);
+      console.log(
+        `[gemini] ${model} ok ${Date.now() - started}ms ${text.length} chars`
+      );
       return text;
     } catch (err) {
       lastError = err;
+      if (Date.now() - started > 40000) {
+        console.error(`[gemini] ${model} slow/failed ${Date.now() - started}ms`);
+      }
     }
   }
 

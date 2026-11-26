@@ -492,15 +492,41 @@ export function sanitizeFormulaSheet(input: unknown): FormulaSheet {
 }
 
 export function sanitizeDoubtSolution(input: unknown): DoubtSolution {
-  const o =
+  let o =
     input && typeof input === "object"
       ? (input as Record<string, unknown>)
       : {};
 
-  const given = text(o.given);
-  const concept = text(o.concept);
-  const finalAnswer = text(o.finalAnswer);
-  const steps = strList(o.steps, 10);
+  // A photo can contain several questions; models sometimes wrap the answer in
+  // { questions: [...] } or use snake_case keys. Normalise before validating.
+  const nested = asArray(o, "questions")[0] ?? asArray(o, "solutions")[0];
+  if (nested && typeof nested === "object") {
+    o = nested as Record<string, unknown>;
+  }
+
+  const pick = (...keys: string[]): unknown => {
+    for (const k of keys) {
+      const v = o[k];
+      if (typeof v === "string" && v.trim()) return v;
+    }
+    return undefined;
+  };
+
+  const given = text(pick("given", "givenData", "given_data", "data"));
+  const concept = text(
+    pick("concept", "conceptUsed", "concept_used", "formula", "method")
+  );
+  const rawAnswer = text(
+    pick("finalAnswer", "final_answer", "answer", "final", "result")
+  );
+  const steps = strList(
+    o.steps ?? o.solution_steps ?? o.solution ?? o.working,
+    10
+  );
+
+  // Never lose a correct working just because the last key is missing.
+  const finalAnswer =
+    rawAnswer || (steps.length > 0 ? steps[steps.length - 1] : "");
 
   if (!finalAnswer) {
     throw new Error("Doubt solver returned no final answer");

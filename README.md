@@ -70,7 +70,7 @@ The retest uses **different questions on the same concepts**. A higher score can
 
 - **Next.js 15** (App Router) + **React 19** + **TypeScript**
 - **Tailwind CSS** for the design system, **KaTeX** for formulas
-- **Google Gemini 2.5 Flash** for generation, tutoring, grading and **vision**
+- **Google Gemini 3.1 Flash-Lite** for generation, tutoring, grading and **vision** (thinking disabled for latency)
 - **Groq** (`openai/gpt-oss-120b`) as an automatic text fallback
 - **Supabase** (`@supabase/ssr`) for optional auth, saved scores and the shared chapter cache
 - **Vercel** for hosting
@@ -92,7 +92,7 @@ Browser (React)
   ├── /api/judge         │
   ├── /api/chapter-notes │
   ├── /api/chapter-formulas
-  └── /api/doubt       ──┘      Gemini Vision (image + note)
+  └── /api/doubt       ──┘      Gemini 3.1 Flash-Lite Vision (image + note)
         │
         ├── keys read from server env
         └── chapter_cache (Supabase) — read first, write once per chapter

@@ -4,7 +4,9 @@ import { doubtSystemPrompt } from "./prompts";
 import { sanitizeDoubtSolution } from "./validate";
 import type { DoubtSolution, Language } from "./types";
 
-const VISION_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"];
+// Same constraint as the text models: on the free tier only Flash-Lite answers,
+// and disabling thinking is what keeps a photo answer at a few seconds.
+const VISION_MODELS = ["gemini-3.1-flash-lite", "gemini-3.1-flash-lite-preview"];
 
 export function hasVisionKey(): boolean {
   return Boolean(process.env.GEMINI_API_KEY);
@@ -25,7 +27,7 @@ export async function solveDoubtImage(args: {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("MISSING_GEMINI_KEY");
 
-  const ai = new GoogleGenAI({ apiKey });
+  const ai = new GoogleGenAI({ apiKey, httpOptions: { apiVersion: "v1beta" } });
 
   const note = args.note?.trim();
   const userText = [
@@ -45,6 +47,7 @@ export async function solveDoubtImage(args: {
   let lastError: unknown = null;
 
   for (const model of VISION_MODELS) {
+    const started = Date.now();
     try {
       const response = await ai.models.generateContent({
         model,
@@ -67,13 +70,26 @@ export async function solveDoubtImage(args: {
           responseMimeType: "application/json",
           temperature: 0.1,
           maxOutputTokens: 2048,
+          thinkingConfig: { thinkingBudget: 0 },
         },
       });
 
       const text = response.text ?? "";
       if (!text.trim()) throw new Error(`${model} returned empty text`);
 
-      return sanitizeDoubtSolution(parseJSON<unknown>(text));
+      console.log(
+        `[vision] ${model} ${Date.now() - started}ms, ${text.length} chars`
+      );
+
+      try {
+        return sanitizeDoubtSolution(parseJSON<unknown>(text));
+      } catch (parseError) {
+        console.error(
+          `[vision] ${model} unusable JSON:`,
+          text.slice(0, 600)
+        );
+        throw parseError;
+      }
     } catch (error) {
       lastError = error;
       console.error(`[vision] ${model} failed`, error);

@@ -28,11 +28,13 @@
 - [x] **Practice & Diagnose** tab deep-links to `/?practice=1&…` and the home page starts the diagnostic on **Electricity 1 of 5** immediately.
 - [x] Floating **📷 Ask a doubt** button on every page; modal exposes `accept="image/*"` + `capture="environment"`, note field and language pills.
 - [x] Supabase-free mode: no keys → auth hidden, cache functions no-op, app fully usable.
+- [x] **Camera solver end-to-end** with a real photo: 4-part answer in **3.5 s**, correct results (10 V; x = 5), disclaimer shown.
+- [x] **Gemini 3.1 Flash-Lite** generation: notes 6.9 s, formula sheet 5.9 s, 5-question diagnostic 5.1 s.
+- [x] **Telugu notes** verified in the API: 1,687 Telugu characters, clean Unicode.
 - [x] Earlier v2 checks still hold: Electricity loop **1/5 → 5/5**, JEE paper loop with solutions, tutor + free-text judge.
 
 ### Not yet verified
 
-- [ ] Camera solver end-to-end — **blocked on `GEMINI_API_KEY`** (Groq is text-only).
 - [ ] Supabase sign-in, RLS and `chapter_cache` hit — **blocked on project credentials**.
 - [ ] Telugu/Hindi/Tamil rendering on a physical phone.
 
@@ -107,12 +109,11 @@ README.md · DEMO.md · PROGRESS.md
 
 ## 4. Next steps
 
-1. **Add `GEMINI_API_KEY`** to `.env.local` (free at <https://aistudio.google.com/apikey>), restart, and test one photo through the doubt solver.
-2. **Create the Supabase project**, run `supabase/schema.sql`, paste the three keys, enable Google/Email auth, add `/auth/callback` to Redirect URLs. Verify: first chapter load writes a `chapter_cache` row, second load returns `source: "cache"`.
-3. **Final `npm run build`**, then commit + push v3.
-4. **Deploy to Vercel** (`vercel link`, add env vars, `vercel --prod`), then add the live URL to Supabase Redirect URLs.
-5. **Rotate the Groq key** — it was pasted into chat. Update `.env.local` and Vercel.
-6. **Test the live link on a phone**: one chapter run, one camera doubt, one JEE paper.
+1. **Create the Supabase project**, run `supabase/schema.sql`, paste the three keys, enable Google/Email auth, add `/auth/callback` to Redirect URLs. Verify: first chapter load writes a `chapter_cache` row, second load returns `source: "cache"`.
+2. **Commit + push v3.1** (Gemini 3.1 Flash-Lite, tolerant doubt validator, chip scrolling).
+3. **Deploy to Vercel** (`vercel link`, add env vars, `vercel --prod`), then add the live URL to Supabase Redirect URLs.
+4. **Rotate the Groq key** — it was pasted into chat. Update `.env.local` and Vercel.
+5. **Test the live link on a phone**: one chapter run, one camera doubt, one JEE paper.
 
 ---
 
@@ -121,7 +122,8 @@ README.md · DEMO.md · PROGRESS.md
 - **Chapter cache** is keyed by `(standard, subject, chapter, language)` and stores `exam_notes` and `formula_sheet` as separate JSONB columns, so either half can be filled independently. Writes use the service-role client; reads are public. Without Supabase env vars every cache call is a silent no-op.
 - **Exam notes and formula sheets are lazy**: only the tab the student opens is generated. The client also caches per language in `localStorage` (`tutor-cache-v3:`).
 - **`plainMath()`** converts leaked KaTeX (`\times`, `\frac`, `^{2}`) into readable symbols in prose fields (steps, answers, definitions) while leaving the `latex` field untouched for KaTeX.
-- **Vision** uses `@google/genai` with `gemini-2.5-flash` → `gemini-2.0-flash`. The prompt forces re-checking arithmetic and forbids inventing a question; images are downscaled to 1500 px JPEG client-side.
+- **Vision** uses `@google/genai` with `gemini-3.1-flash-lite` → `gemini-3.1-flash-lite-preview`, thinking disabled. The prompt forces re-checking arithmetic and forbids inventing a question; images are downscaled to 1500 px JPEG client-side.
+- **Model choice is driven by the free tier:** on this key the 3.5–3.8 Flash models answer `503 high demand` and Pro answers `429 quota`, so Flash-Lite is primary and Groq is the text backup. Thinking is off (`thinkingBudget: 0`) — with thinking on, the same photo took 243 s instead of 1.8 s.
 - **Deep link contract:** `/chapter/...` → Practice tab → `/?practice=1&standard&subject&chapter&lang&num` → home page starts the loop and clears the query with `history.replaceState`.
 - **Seeded chapters**: Class 6 Maths, Class 9 Science/Maths, Class 10 Science/Maths, Class 11 Physics, Class 12 Physics. Everything else is AI-generated once and cached.
 - **Notes** are two AI calls (summary in English, revision in the selected language), run **sequentially** for Groq's 8k TPM limit; `parts` allows a partial retry.

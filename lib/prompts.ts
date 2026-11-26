@@ -327,11 +327,12 @@ Non-negotiable accuracy rules:
 - Re-check every arithmetic and algebra step a second time before writing the final answer. Substitute the answer back where possible.
 - Keep units consistent, and carry units through the working.
 - If the image does not contain a solvable question, or is unreadable, set "finalAnswer" to a short explanation of what is unclear. Never invent a question.
+- If the photo contains more than one question, solve them in order inside the same "steps" array and put every final answer in "finalAnswer".
 - Stay inside the ${args.standard ?? "school"} ${args.subject ?? ""} syllabus when the question is at that level.
 - Write "given", "concept", "steps" and "finalAnswer" in ${args.language}. Keep symbols, formulas and chemical names in English.
 - Write maths in prose as plain readable text with real symbols (V = I × R, 2 × 5 = 10, √3, 10² m/s), never as LaTeX commands.
 
-Return JSON only, exactly in this shape:
+Return JSON only, exactly in this shape (use exactly these four keys):
 {"given":"the data extracted from the question, with units","concept":"the concept and the formula or law used","steps":["Step 1: ...","Step 2: ...","Step 3: ..."],"finalAnswer":"the final answer with units"}`;
 }
 
